@@ -1,4 +1,4 @@
-# Frequency detecting Webcam app
+# Frequency Detecting Webcam Application
 <p>
 This is a simple Python program for testing the frequency and power of a light source in front of your web camera. A high-sensitivity web camera is required for this application. There are a few features to look for when looking for a webcam with higher light sensitivity.
 </p>
