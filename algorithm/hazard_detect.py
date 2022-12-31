@@ -55,12 +55,12 @@ def sRBG_to_linearRGB(sRGB: np.ndarray) -> np.ndarray:
 def linearRBG_to_Ls(linearRGB: np.ndarray) -> float:
     """Compute the relative luminance value of a pixel in sRGB color space."""
 
-    return 0.2126 * linearRGB[0] + 0.7152 * linearRGB[1] + 0.0722 * linearRGB[2]
+    return 0.2126 * linearRGB[...,0] + 0.7152 * linearRGB[...,1] + 0.0722 * linearRGB[...,2]
 
 
 def red_ratio(sRGB: np.ndarray) -> float:
     """Compute the red ratio of a color in sRGB color space."""
-    return sRGB[0] / (sRGB[0] + sRGB[1] + sRGB[2])
+    return sRGB[...,0] / (sRGB[...,0] + sRGB[...,1] + sRGB[...,2])
 
 
 def pure_red(sRGB: np.ndarray) -> float:
@@ -68,7 +68,7 @@ def pure_red(sRGB: np.ndarray) -> float:
     # if sRGB[0] > sRGB[1] + sRGB[2]:
     #     return (sRGB[0] - sRGB[1] - sRGB[2]) * 320
     # return 0
-    comp = (sRGB[0] - sRGB[1] - sRGB[2])
+    comp = (sRGB[...,0] - sRGB[...,1] - sRGB[...,2])
     return np.where(comp > 0, comp * 320, 0)
 
 
@@ -88,8 +88,8 @@ def is_saturated_red_flash(linear_color: np.ndarray, prev_linear_color: np.ndarr
     #         return True
 
     # return False
-    return np.all([np.any([red_ratio(linear_color) >= 0.8, red_ratio(prev_linear_color) >= 0.8]), \
-        abs(pure_red(linear_color) - pure_red(prev_linear_color)) >= 20])
+    return np.all([np.any([red_ratio(linear_color) >= 0.8, red_ratio(prev_linear_color) >= 0.8], axis = 0), \
+        abs(pure_red(linear_color) - pure_red(prev_linear_color)) >= 20], axis = 0)
 
 
 def is_hazardous(color: np.ndarray, prev_color: np.ndarray) -> bool:
@@ -126,10 +126,10 @@ def is_hazardous(color: np.ndarray, prev_color: np.ndarray) -> np.ndarray:
 
     # If the relative luminance values are different enough to be considered a flash
     # or If a Saturated Red Flash is detected
-    return np.any([is_luminance_flash(Ls, prev_Ls), is_saturated_red_flash(linear_color, linear_prev_color)])
+    return np.any([is_luminance_flash(Ls, prev_Ls), is_saturated_red_flash(linear_color, linear_prev_color)], axis = 0)
 
 
-# color1 = np.array([[1, 1, 1], [0, 0, 0]])
-# color2 = np.array([[0, 0, 0.1], [0, 0, 0]])
+color1 = np.array([[[1, 1, 1], [0, 0, 0]], [[0.4, 0.6, 0.9], [0.4, 0.1, 0.1]]])
+color2 = np.array([[[0, 0, 0.1], [0, 0, 0]], [[0.1, 0.2, 0.11], [1, 1, 1]]])
 # print(is_luminance_flash(color1, color2))
         

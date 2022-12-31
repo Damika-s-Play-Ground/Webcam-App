@@ -65,8 +65,7 @@ try:
                         print("Flashing detected")
                         
                 print("Frame processed")
-                
-except KeyboardInterrupt:
+finally:
     cap.release()
     cv2.destroyAllWindows()
     
