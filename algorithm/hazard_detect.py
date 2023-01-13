@@ -128,8 +128,28 @@ def is_hazardous(color: np.ndarray, prev_color: np.ndarray) -> np.ndarray:
     # or If a Saturated Red Flash is detected
     return np.any([is_luminance_flash(Ls, prev_Ls), is_saturated_red_flash(linear_color, linear_prev_color)], axis = 0)
 
+def luminance_flash_count(color: np.ndarray, prev_color: np.ndarray) -> np.ndarray:
+    color, prev_color = color / 255, prev_color / 255
+    
+    # Transform to linear
+    linear_color = sRBG_to_linearRGB(color)
+    linear_prev_color = sRBG_to_linearRGB(prev_color)
+
+    # Compute the relative luminance value
+    prev_Ls = linearRBG_to_Ls(linear_prev_color)
+    Ls = linearRBG_to_Ls(linear_color)
+    return np.int32(is_luminance_flash(Ls, prev_Ls))
+
+def saturated_red_flash_count(color: np.ndarray, prev_color: np.ndarray) -> np.ndarray:
+    color, prev_color = color / 255, prev_color / 255
+    
+    # Transform to linear
+    linear_color = sRBG_to_linearRGB(color)
+    linear_prev_color = sRBG_to_linearRGB(prev_color)
+    
+    return np.int32(is_saturated_red_flash(linear_color, linear_prev_color))
 
 color1 = np.array([[[1, 1, 1], [0, 0, 0]], [[0.4, 0.6, 0.9], [0.4, 0.1, 0.1]]])
 color2 = np.array([[[0, 0, 0.1], [0, 0, 0]], [[0.1, 0.2, 0.11], [1, 1, 1]]])
-# print(is_luminance_flash(color1, color2))
+#print(saturated_red_flash_count(color1, color2))
         
