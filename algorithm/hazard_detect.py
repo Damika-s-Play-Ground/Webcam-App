@@ -152,4 +152,3 @@ def saturated_red_flash_count(color: np.ndarray, prev_color: np.ndarray) -> np.n
 color1 = np.array([[[1, 1, 1], [0, 0, 0]], [[0.4, 0.6, 0.9], [0.4, 0.1, 0.1]]])
 color2 = np.array([[[0, 0, 0.1], [0, 0, 0]], [[0.1, 0.2, 0.11], [1, 1, 1]]])
 #print(saturated_red_flash_count(color1, color2))
-        
