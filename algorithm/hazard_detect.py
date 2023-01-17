@@ -78,7 +78,7 @@ def is_luminance_flash(Ls: np.ndarray, prev_Ls: np.ndarray) -> np.ndarray:
     brigher_Ls = np.max([Ls, prev_Ls], axis = 0)
     darker_Ls = np.min([Ls, prev_Ls], axis = 0)
 
-    return np.all([(brigher_Ls - darker_Ls) / (brigher_Ls+1e-10) >= 0.1, darker_Ls < 0.8], axis = 0)
+    return np.all([(brigher_Ls - darker_Ls) >= 0.1, darker_Ls < 0.8], axis = 0)
 
 
 def is_saturated_red_flash(linear_color: np.ndarray, prev_linear_color: np.ndarray) -> np.ndarray:

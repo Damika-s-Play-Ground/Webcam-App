@@ -10,7 +10,7 @@ BUFFER_SIZE = 16
 
 # Open the webcam
 cap = cv2.VideoCapture(0)
-cap.set(cv2.CAP_PROP_FPS, 100)
+cap.set(cv2.CAP_PROP_FPS, 50)
 
 # Disable auto exposure
 # TODO: This is not working
@@ -41,17 +41,14 @@ prev_time = time.time()
 try:
     while True:
         
-        while len(time_buffer) < 30:
+        while not time_buffer or time_buffer[-1] - time_buffer[0] < 1:#len(time_buffer) < 30:
             # Read a frame from the webcam
             ret, frame = cap.read()
-            #frame = np.zeros(frame.shape)
-            time.sleep(1/40)
+            
             #If the frame was successfully read
             if ret:
-                
                 #changing the resolution while keeping the aspect ratio
                 frame = imutils.resize(frame, width=WIDTH)
-                
                 # Add the frame to the frame buffer
                 frame_buffer.append(frame)
                 time_buffer.append(time.time())
@@ -61,6 +58,10 @@ try:
             
             cur_frame = frame_buffer[i]
             prev_frame = frame_buffer[i - 1]
+            
+            
+            cv2.imshow('video', cur_frame)
+            cv2.waitKey(1)
             
             # Check if transition is a flash
             luminous = luminance_flash_count(cur_frame, prev_frame)
@@ -82,7 +83,7 @@ try:
         
         print(np.mean(luminous_flash_freq), np.mean(red_flash_freq))
         if luminous_count >= quarter_area_threshold or red_count >= quarter_area_threshold:
-            print("Flashing detected")
+            print("Flashing detected, no of flashing pixels = ", luminous_count, red_count)
         n = len(frame_buffer)
         # Pop first element to change sliding window
         frame_buffer.clear()

@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 
 # Open the webcam
 capture = cv2.VideoCapture(0)
-capture.set(cv2.CAP_PROP_FPS, 100)
+capture.set(cv2.CAP_PROP_FPS, 30)
 
 # Increase the exposure time
 capture.set(cv2.CAP_PROP_EXPOSURE, 5)
