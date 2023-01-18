@@ -6,6 +6,7 @@ from collections import deque
 import imutils
 import serial
 import serial.tools.list_ports
+from multiprocessing import Pool
 
 # CONSTANTS
 PORT = '/dev/rfcomm0'
@@ -45,37 +46,29 @@ def check_for_connection():
 
     return False
 
-def run_program():
-    serial_connection = initialise_bluetooth_communication();
-
-    # Open the webcam
-    cap = cv2.VideoCapture(0)
-    cap.set(cv2.CAP_PROP_FPS, 100)
-
-    # Disable auto exposure
-    # TODO: This is not working
-
-    # Width and height of the webcam frame after resizing (without changing resolution)
-    ret, frame = cap.read()
-    frame = imutils.resize(frame, width = frame.shape[1] // 4)
-
-    WIDTH = frame.shape[1]
-    HEIGHT = frame.shape[0]
-
-    # Set the quarter area threshold (in pixels)
-    quarter_area_threshold = (WIDTH * HEIGHT) / 4
-
-    # Initialize the frame buffer
-    frame_buffer = deque()
-    time_buffer = deque()
-    luminous_flash_buffer = deque()
-    red_flash_buffer = deque()
-
+def thread_process_frames(proc_range):
     luminous_flashes = np.zeros(frame.shape[:2])
     red_flashes = np.zeros(frame.shape[:2])
+    #print(a, b, "Starting", flush = True)
+    for i in range(proc_range[0] + 1, min(proc_range[1], len(frame_buffer))):
+        # If a previous frame exists, check whether the transition has a luminous/red flash
+        
+        cur_frame = frame_buffer[i]
+        prev_frame = frame_buffer[i - 1]
+        
+        # Check if transition is a flash
+        luminous = luminance_flash_count(cur_frame, prev_frame)
+        red = saturated_red_flash_count(cur_frame, prev_frame)
+        
+        # Update buffers and flash count
+        
+        luminous_flashes += luminous
+        red_flashes += red
+    #print(a, b, "Done", flush = True)
+    return np.array([luminous_flashes, red_flashes])
 
-    # Initialize previous time
-    prev_time = time.time()
+def run_program():
+    serial_connection = initialise_bluetooth_communication();
 
     # Capture frames from the webcam
     try:
@@ -86,62 +79,44 @@ def run_program():
             #check if there is incoming data
             while serial_connection != None and check_for_connection() and serial_connection.in_waiting:
                 receive_data(serial_connection)
-
-            # Read a frame from the webcam
-            ret, frame = cap.read()
-
-            #If the frame was successfully read
-            if ret:
-                #changing the resolution while keeping the aspect ratio
-                frame = imutils.resize(frame, width=WIDTH)
+            
+            while not time_buffer or time_buffer[-1] - time_buffer[0] < 1:#len(time_buffer) < 30:
+                # Read a frame from the webcam
+                ret, frame = cap.read()
                 
-                # Add the frame to the frame buffer
-                frame_buffer.append(frame)
-                time_buffer.append(time.time())
+                #If the frame was successfully read
+                if ret:
+                    #changing the resolution while keeping the aspect ratio
+                    frame = imutils.resize(frame, width=WIDTH)
+                    # Add the frame to the frame buffer
+                    frame_buffer.append(frame)
+                    time_buffer.append(time.time())
+            s = time.time()
+            
+            n = len(frame_buffer)
+            per_thread = int(np.ceil(n/4))
+            ranges = [(i, i+per_thread) for i in range(0, n, per_thread)]
+            
+            with Pool(4) as pool:
+                flashes = np.sum(pool.map(thread_process_frames, ranges), axis = 0)
+            
+            print("Time for processing %d frames = %f"%(n, time.time() - s))
+            
+            # When there are enough frames and more than 1s has elapsed, check for flashing sequences
+            interval = time_buffer[-1] - time_buffer[0]
+            flash_freqs = (flashes/2) / interval
+            
+            luminous_count = np.sum(flash_freqs[0] >= 3)
+            red_count = np.sum(flash_freqs[1] >= 3)
+            
+            print(np.mean(flash_freqs[0]), np.mean(flash_freqs[1]))
+            if luminous_count >= quarter_area_threshold or red_count >= quarter_area_threshold:
+                print("Flashing detected, no of flashing pixels = ", luminous_count, red_count)
+            
+            # Pop first element to change sliding window
+            frame_buffer.clear()
+            time_buffer.clear()
                 
-                # If a previous frame exists, check whether the transition has a luminous/red flash
-		a_start = time.time()
-                if len(frame_buffer) > 1:
-                    cur_frame = frame_buffer[-1]
-                    prev_frame = frame_buffer[-2]
-                    
-                    # Check if transition for each pixel is a flash
-                    luminous = luminance_flash_count(cur_frame, prev_frame)
-                    red = saturated_red_flash_count(cur_frame, prev_frame)
-                    
-                    # Update buffers and flash count
-                    luminous_flash_buffer.append(luminous)
-                    luminous_flashes += luminous
-                    red_flash_buffer.append(red)
-                    red_flashes += red
-                   
-		print(time.time()-a_start)		
-	
-                # When there are enough frames and more than 1s has elapsed, check for flashing sequences
-                interval = time_buffer[-1] - time_buffer[0]
-               	if len(frame_buffer) >= BUFFER_SIZE and interval >= 1:
-                    
-                    luminous_flash_freq = (luminous_flashes/2) / interval
-                    red_flash_freq = (red_flashes/2) / interval
-                    
-                    luminous_count = np.sum(luminous_flash_freq >= 3)
-                    red_count = np.sum(red_flash_freq >= 3)
-                    
-                    print(np.mean(luminous_flash_freq), np.mean(red_flash_freq))
-                    send_array_over_bluetooth([round(np.mean(luminous_flash_freq),2), round(np.mean(red_flash_freq),2)], serial_connection);
-                    if luminous_count >= quarter_area_threshold or red_count >= quarter_area_threshold:
-                        print("Flashing detected")
-                        
-                    # Pop first element to change sliding window
-                    frame_buffer.popleft()
-                    time_buffer.popleft()
-                    
-                    # Update flash count
-                    luminous_flashes -= luminous_flash_buffer.popleft()
-                    red_flashes -= red_flash_buffer.popleft()
-                    
-                    
-            #print(luminous_flashes)                    
                 
     finally:
         print(time_buffer) 
@@ -149,8 +124,24 @@ def run_program():
         cv2.destroyAllWindows()
 
 
-while True:
-    try:
-        run_program()
-    except Exception as e:
-        print(e)
+# Open the webcam
+cap = cv2.VideoCapture(0)
+cap.set(cv2.CAP_PROP_FPS, 10)
+
+# Disable auto exposure
+# TODO: This is not working
+
+# Width and height of the webcam frame after resizing (without changing resolution)
+ret, frame = cap.read()
+frame = imutils.resize(frame, width = frame.shape[1] // 4)
+
+WIDTH = frame.shape[1]
+HEIGHT = frame.shape[0]
+
+# Set the quarter area threshold (in pixels)
+quarter_area_threshold = (WIDTH * HEIGHT) / 4
+
+# Initialize the frame buffer
+frame_buffer = []
+time_buffer = []
+run_program()
