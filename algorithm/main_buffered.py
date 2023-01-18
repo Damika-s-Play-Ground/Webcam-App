@@ -4,7 +4,7 @@ import numpy as np
 from hazard_detect import saturated_red_flash_count, luminance_flash_count
 from collections import deque
 import imutils
-from multiprocessing import Process, Lock
+from multiprocessing import Pool
 
 # Buffer size (in frames)
 BUFFER_SIZE = 16
@@ -30,15 +30,13 @@ quarter_area_threshold = (WIDTH * HEIGHT) / 4
 frame_buffer = []
 time_buffer = []
 
-luminous_flashes = np.zeros(frame.shape[:2])
-red_flashes = np.zeros(frame.shape[:2])
 
-mutex = Lock()
 
-def thread_process_frames(a, b):
-    global luminous_flashes, red_flashes
-    print(a, b, "Starting", flush = True)
-    for i in range(a + 1, min(b, len(frame_buffer))):
+def thread_process_frames(proc_range):
+    luminous_flashes = np.zeros(frame.shape[:2])
+    red_flashes = np.zeros(frame.shape[:2])
+    #print(a, b, "Starting", flush = True)
+    for i in range(proc_range[0] + 1, min(proc_range[1], len(frame_buffer))):
         # If a previous frame exists, check whether the transition has a luminous/red flash
         
         cur_frame = frame_buffer[i]
@@ -49,11 +47,11 @@ def thread_process_frames(a, b):
         red = saturated_red_flash_count(cur_frame, prev_frame)
         
         # Update buffers and flash count
-        with mutex:
-            luminous_flashes += luminous
-            red_flashes += red
-    print(a, b, "Done", flush = True)
-    return
+        
+        luminous_flashes += luminous
+        red_flashes += red
+    #print(a, b, "Done", flush = True)
+    return np.array([luminous_flashes, red_flashes])
 
 # Capture frames from the webcam
 try:
@@ -73,24 +71,22 @@ try:
         s = time.time()
         
         n = len(frame_buffer)
-        ranges = list(range(0, n, int(np.ceil(n/4)))) + [n-1]
+        per_thread = int(np.ceil(n/4))
+        ranges = [(i, i+per_thread) for i in range(0, n, per_thread)]
         
-        threads = [Process(target = thread_process_frames, args = (ranges[i],ranges[i+1]+1)) for i in range(4)]
-        
-        for t in threads: t.start()
-        for t in threads: t.join()
+        with Pool(4) as pool:
+            flashes = np.sum(pool.map(thread_process_frames, ranges), axis = 0)
         
         print("Time for processing %d frames = %f"%(n, time.time() - s))
         
         # When there are enough frames and more than 1s has elapsed, check for flashing sequences
         interval = time_buffer[-1] - time_buffer[0]
-        luminous_flash_freq = (luminous_flashes/2) / interval
-        red_flash_freq = (red_flashes/2) / interval
+        flash_freqs = (flashes/2) / interval
         
-        luminous_count = np.sum(luminous_flash_freq >= 3)
-        red_count = np.sum(red_flash_freq >= 3)
+        luminous_count = np.sum(flash_freqs[0] >= 3)
+        red_count = np.sum(flash_freqs[1] >= 3)
         
-        print(np.mean(luminous_flash_freq), np.mean(red_flash_freq))
+        print(np.mean(flash_freqs[0]), np.mean(flash_freqs[1]))
         if luminous_count >= quarter_area_threshold or red_count >= quarter_area_threshold:
             print("Flashing detected, no of flashing pixels = ", luminous_count, red_count)
         n = len(frame_buffer)
