@@ -1,24 +1,32 @@
 import cv2
 import time
 import numpy as np
-from hazard_detect import saturated_red_flash_count, luminance_flash_count
-from collections import deque
+import matplotlib.pyplot as plt
 import imutils
-
-# Buffer size (in frames)
-BUFFER_SIZE = 16
+from collections import deque
+from hazard_detect import *
 
 # Open the webcam
-cap = cv2.VideoCapture(0)
-cap.set(cv2.CAP_PROP_FPS, 100)
+capture = cv2.VideoCapture(0)
+capture.set(cv2.CAP_PROP_FPS, 100)
 
-# Disable auto exposure
-# TODO: This is not working
+# Increase the exposure time
+capture.set(cv2.CAP_PROP_EXPOSURE, 5)
+
+# Set the frame rate
+frame_rate = 30
+
+# Initialize a list to store the average brightness values
+brightness_values = []
+
+# Initialize a counter to track the elapsed time
+elapsed_time = 0
+start_time = time.time()
 
 # Width and height of the webcam frame after resizing (without changing resolution)
-ret, frame = cap.read()
+ret, frame = capture.read()
 frame = imutils.resize(frame, width = frame.shape[1] // 4)
-
+BUFFER_SIZE = 16
 WIDTH = frame.shape[1]
 HEIGHT = frame.shape[0]
 
@@ -34,16 +42,12 @@ red_flash_buffer = deque()
 luminous_flashes = np.zeros(frame.shape[:2])
 red_flashes = np.zeros(frame.shape[:2])
 
-# Initialize previous time
-prev_time = time.time()
-
-# Capture frames from the webcam
+# Loop indefinitely
 try:
     while True:
-        # Read a frame from the webcam
-        ret, frame = cap.read()
-        #frame = np.zeros(frame.shape)
-        
+        # Capture a frame from the webcam
+        ret, frame = capture.read()
+    
         #If the frame was successfully read
         if ret:
             s = time.time()
@@ -91,7 +95,11 @@ try:
                 luminous_flashes -= luminous_flash_buffer.popleft()
                 red_flashes -= red_flash_buffer.popleft()
             
+        cv2.imshow('video', frame)
+        # Check if the user pressed 'q' to quit
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
 finally:
-    cap.release()
+    # Release the webcam and close all windows
+    capture.release()
     cv2.destroyAllWindows()
-    

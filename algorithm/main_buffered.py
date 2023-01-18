@@ -4,13 +4,14 @@ import numpy as np
 from hazard_detect import saturated_red_flash_count, luminance_flash_count
 from collections import deque
 import imutils
+from multiprocessing import Process, Lock
 
 # Buffer size (in frames)
 BUFFER_SIZE = 16
 
 # Open the webcam
 cap = cv2.VideoCapture(0)
-cap.set(cv2.CAP_PROP_FPS, 50)
+cap.set(cv2.CAP_PROP_FPS, 30)
 
 # Disable auto exposure
 # TODO: This is not working
@@ -26,16 +27,33 @@ HEIGHT = frame.shape[0]
 quarter_area_threshold = (WIDTH * HEIGHT) / 4
 
 # Initialize the frame buffer
-frame_buffer = deque()
-time_buffer = deque()
-luminous_flash_buffer = deque()
-red_flash_buffer = deque()
+frame_buffer = []
+time_buffer = []
 
 luminous_flashes = np.zeros(frame.shape[:2])
 red_flashes = np.zeros(frame.shape[:2])
 
-# Initialize previous time
-prev_time = time.time()
+mutex = Lock()
+
+def thread_process_frames(a, b):
+    global luminous_flashes, red_flashes
+    print(a, b, "Starting", flush = True)
+    for i in range(a + 1, min(b, len(frame_buffer))):
+        # If a previous frame exists, check whether the transition has a luminous/red flash
+        
+        cur_frame = frame_buffer[i]
+        prev_frame = frame_buffer[i - 1]
+        
+        # Check if transition is a flash
+        luminous = luminance_flash_count(cur_frame, prev_frame)
+        red = saturated_red_flash_count(cur_frame, prev_frame)
+        
+        # Update buffers and flash count
+        with mutex:
+            luminous_flashes += luminous
+            red_flashes += red
+    print(a, b, "Done", flush = True)
+    return
 
 # Capture frames from the webcam
 try:
@@ -53,25 +71,16 @@ try:
                 frame_buffer.append(frame)
                 time_buffer.append(time.time())
         s = time.time()
-        for i in range(1, len(frame_buffer)):
-            # If a previous frame exists, check whether the transition has a luminous/red flash
-            
-            cur_frame = frame_buffer[i]
-            prev_frame = frame_buffer[i - 1]
-            
-            
-            cv2.imshow('video', cur_frame)
-            cv2.waitKey(1)
-            
-            # Check if transition is a flash
-            luminous = luminance_flash_count(cur_frame, prev_frame)
-            red = saturated_red_flash_count(cur_frame, prev_frame)
-            
-            # Update buffers and flash count
-            luminous_flash_buffer.append(luminous)
-            luminous_flashes += luminous
-            red_flash_buffer.append(red)
-            red_flashes += red
+        
+        n = len(frame_buffer)
+        ranges = list(range(0, n, int(np.ceil(n/4)))) + [n-1]
+        
+        threads = [Process(target = thread_process_frames, args = (ranges[i],ranges[i+1]+1)) for i in range(4)]
+        
+        for t in threads: t.start()
+        for t in threads: t.join()
+        
+        print("Time for processing %d frames = %f"%(n, time.time() - s))
         
         # When there are enough frames and more than 1s has elapsed, check for flashing sequences
         interval = time_buffer[-1] - time_buffer[0]
@@ -92,7 +101,7 @@ try:
         # Update flash count
         luminous_flashes = np.zeros(frame.shape[:2])
         red_flashes = np.zeros(frame.shape[:2])
-        print("Time for processing %d frames = %f"%(n, time.time() - s))
+        
 finally:
     cap.release()
     cv2.destroyAllWindows()
