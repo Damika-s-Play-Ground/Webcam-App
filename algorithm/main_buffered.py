@@ -89,14 +89,11 @@ try:
         print(np.mean(flash_freqs[0]), np.mean(flash_freqs[1]))
         if luminous_count >= quarter_area_threshold or red_count >= quarter_area_threshold:
             print("Flashing detected, no of flashing pixels = ", luminous_count, red_count)
-        n = len(frame_buffer)
+        
         # Pop first element to change sliding window
         frame_buffer.clear()
         time_buffer.clear()
         
-        # Update flash count
-        luminous_flashes = np.zeros(frame.shape[:2])
-        red_flashes = np.zeros(frame.shape[:2])
         
 finally:
     cap.release()

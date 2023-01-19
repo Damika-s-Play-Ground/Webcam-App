@@ -7,6 +7,7 @@ import imutils
 import serial
 import serial.tools.list_ports
 from multiprocessing import Pool
+import RPi.GPIO as GPIO
 
 # CONSTANTS
 PORT = '/dev/rfcomm0'
@@ -112,7 +113,11 @@ def run_program():
             print(np.mean(flash_freqs[0]), np.mean(flash_freqs[1]))
             if luminous_count >= quarter_area_threshold or red_count >= quarter_area_threshold:
                 print("Flashing detected, no of flashing pixels = ", luminous_count, red_count)
-            
+                send_array_over_bluetooth([np.mean(flash_freqs[0]), np.mean(flash_freqs[1])], serial_connection)
+                GPIO.output(14,GPIO.HIGH)
+            else:
+                GPIO.output(14,GPIO.LOW)
+                
             # Pop first element to change sliding window
             frame_buffer.clear()
             time_buffer.clear()
@@ -127,6 +132,11 @@ def run_program():
 # Open the webcam
 cap = cv2.VideoCapture(0)
 cap.set(cv2.CAP_PROP_FPS, 10)
+
+# Setup rpi LED
+GPIO.setmode(GPIO.BCM)
+GPIO.setwarnings(False)
+GPIO.setup(14,GPIO.OUT)
 
 # Disable auto exposure
 # TODO: This is not working
