@@ -11,7 +11,7 @@ import numpy as np
 from hazard_detect import saturated_red_flash_count, luminance_flash_count
 from collections import deque
 import imutils
-import thread
+import threading
 
 # Buffer size (in frames)
 BUFFER_SIZE = 16
@@ -100,11 +100,17 @@ def process_frames():
 
 
 try:
-    thread.start_new_thread(process_frames())
-    thread.start_new_thread(capture_frames())
-    
-    while(True):
-        pass
+    # creating threads
+    t1 = threading.Thread(target=process_frames, name='t1')
+    t2 = threading.Thread(target=capture_frames, name='t2') 
+ 
+    # starting threads
+    t1.start()
+    t2.start()
+ 
+    # wait until all threads finish
+    t1.join()
+    t2.join()
 finally:
     cap.release()
     cv2.destroyAllWindows()
