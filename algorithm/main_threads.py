@@ -18,7 +18,7 @@ BUFFER_SIZE = 16
 
 # Open the webcam
 cap = cv2.VideoCapture(0)
-cap.set(cv2.CAP_PROP_FPS, 100)
+cap.set(cv2.CAP_PROP_FPS, 30)
 
 # Disable auto exposure
 # TODO: This is not working
@@ -46,6 +46,10 @@ red_flashes = np.zeros(frame.shape[:2])
 
 def capture_frames():
     while True:
+        
+        if len(time_buffer) > 60:
+            #print(time_buffer[-1] - time_buffer[0])
+            continue
         ret, frame = cap.read()
         #If the frame was successfully read
         if ret:
@@ -54,14 +58,13 @@ def capture_frames():
             # Add the frame to the frame buffer
             frame_buffer.append(frame)
             time_buffer.append(time.time())
-        if time_buffer[-1] - time_buffer[0] >= 1.5:
-            time.sleep(0.5)
         
         
 def process_frames():
     global luminous_flashes, red_flashes
     while True:
         # If a previous frame exists, check whether the transition has a luminous/red flash
+        s = time.time()
         if len(frame_buffer) > 1:
             cur_frame = frame_buffer[-1]
             prev_frame = frame_buffer[-2]
@@ -75,9 +78,10 @@ def process_frames():
             luminous_flashes += luminous
             red_flash_buffer.append(red)
             red_flashes += red
+            print(time.time() - s)
             
         # When there are enough frames and more than 1s has elapsed, check for flashing sequences
-        interval = time_buffer[-1] - time_buffer[0]
+        interval = time_buffer[-1] - time_buffer[0] if len(time_buffer) > 0 else 0
         if len(frame_buffer) >= BUFFER_SIZE and interval >= 1:
             
             luminous_flash_freq = (luminous_flashes/2) / interval
@@ -86,7 +90,7 @@ def process_frames():
             luminous_count = np.sum(luminous_flash_freq >= 3)
             red_count = np.sum(red_flash_freq >= 3)
             
-            print(np.mean(luminous_flash_freq), np.mean(red_flash_freq))
+            print(len(time_buffer), interval, np.mean(luminous_flash_freq), np.mean(red_flash_freq))
             if luminous_count >= quarter_area_threshold or red_count >= quarter_area_threshold:
                 print("Flashing detected")
                 
