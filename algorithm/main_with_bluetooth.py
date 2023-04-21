@@ -81,7 +81,7 @@ def run_program():
             while serial_connection != None and check_for_connection() and serial_connection.in_waiting:
                 receive_data(serial_connection)
             
-            while not time_buffer or time_buffer[-1] - time_buffer[0] < 1:#len(time_buffer) < 30:
+            while not time_buffer or time_buffer[-1] - time_buffer[0] < 0.6:#len(time_buffer) < 30:
                 # Read a frame from the webcam
                 ret, frame = cap.read()
                 
@@ -113,7 +113,7 @@ def run_program():
             print(np.mean(flash_freqs[0]), np.mean(flash_freqs[1]))
             if luminous_count >= quarter_area_threshold or red_count >= quarter_area_threshold:
                 print("Flashing detected, no of flashing pixels = ", luminous_count, red_count)
-                send_array_over_bluetooth([np.mean(flash_freqs[0]), np.mean(flash_freqs[1])], serial_connection)
+                send_array_over_bluetooth(["Flashing detected","Flashing frequency",np.mean(flash_freqs[0]), np.mean(flash_freqs[1])], serial_connection)
                 GPIO.output(14,GPIO.HIGH)
             else:
                 GPIO.output(14,GPIO.LOW)
@@ -143,7 +143,7 @@ GPIO.setup(14,GPIO.OUT)
 
 # Width and height of the webcam frame after resizing (without changing resolution)
 ret, frame = cap.read()
-frame = imutils.resize(frame, width = frame.shape[1] // 4)
+frame = imutils.resize(frame, width = frame.shape[1] // 5)
 
 WIDTH = frame.shape[1]
 HEIGHT = frame.shape[0]
