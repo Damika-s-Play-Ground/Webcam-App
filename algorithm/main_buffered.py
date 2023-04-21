@@ -5,6 +5,7 @@ from hazard_detect import saturated_red_flash_count, luminance_flash_count
 from collections import deque
 import imutils
 from multiprocessing import Pool
+import thread
 
 # Buffer size (in frames)
 BUFFER_SIZE = 16
@@ -29,7 +30,6 @@ quarter_area_threshold = (WIDTH * HEIGHT) / 4
 # Initialize the frame buffer
 frame_buffer = []
 time_buffer = []
-
 
 
 def thread_process_frames(proc_range):

@@ -61,11 +61,6 @@ try:
                     cur_frame = frame_sliding_window[j]
                     prev_frame = frame_sliding_window[j-1]
     
-                    # For each pixel in frame
-                    # for k in range(frame.shape[0]):  # TODO: This is too slow
-                    #     for l in range(frame.shape[1]):
-                    #         if is_hazardous(cur_frame[k][l] / 255, prev_frame[k][l] / 255):
-                    #             flashing_pixels_count += 1
                     flashing_pixels_count = np.sum(is_hazardous(cur_frame / 255, prev_frame / 255))
                     if (flashing_pixels_count > quarter_area_threshold):
                         flash_count += 1

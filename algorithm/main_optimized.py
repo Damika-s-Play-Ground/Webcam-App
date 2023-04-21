@@ -90,6 +90,8 @@ try:
                 # Update flash count
                 luminous_flashes -= luminous_flash_buffer.popleft()
                 red_flashes -= red_flash_buffer.popleft()
+                
+                print(time.time() - s)
             
 finally:
     cap.release()
