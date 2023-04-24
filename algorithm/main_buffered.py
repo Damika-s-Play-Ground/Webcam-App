@@ -5,7 +5,6 @@ from hazard_detect import saturated_red_flash_count, luminance_flash_count
 from collections import deque
 import imutils
 from multiprocessing import Pool
-import thread
 
 # Buffer size (in frames)
 BUFFER_SIZE = 16
