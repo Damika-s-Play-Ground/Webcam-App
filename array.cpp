@@ -20,7 +20,7 @@ int main() {
         }
     }
     end = clock();
-    cout << (float) (end - start) / (float) (CLOCKS_PER_SEC);
+    cout << (float) (end - start) / (float) (CLOCKS_PER_SEC) << endl;
 
     return 0;
 }
