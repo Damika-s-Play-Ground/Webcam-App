@@ -10,7 +10,7 @@ BUFFER_SIZE = 16
 
 # Open the webcam
 cap = cv2.VideoCapture(0)
-cap.set(cv2.CAP_PROP_FPS, 100)
+cap.set(cv2.CAP_PROP_FPS, 30)
 
 # Disable auto exposure
 # TODO: This is not working
@@ -91,7 +91,7 @@ try:
                 luminous_flashes -= luminous_flash_buffer.popleft()
                 red_flashes -= red_flash_buffer.popleft()
                 
-                print(time.time() - s)
+                print(time.time() - s, len(frame_buffer))
             
 finally:
     cap.release()
