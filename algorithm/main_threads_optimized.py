@@ -4,6 +4,7 @@ import numpy as np
 from hazard_detect import saturated_red_flash_count, luminance_flash_count
 from collections import deque
 import imutils
+from multiprocessing import Pool
 
 # Buffer size (in frames)
 BUFFER_SIZE = 16
@@ -37,6 +38,23 @@ red_flashes = np.zeros(frame.shape[:2])
 # Initialize previous time
 prev_time = time.time()
 
+def thread_process_frame(proc_range):
+    global luminous_flashes, red_flashes
+    print(proc_range, "Started", flush = True)
+    
+    cur_frame_part = cur_frame[proc_range[0]:proc_range[1]]
+    prev_frame_part = prev_frame[proc_range[0]:proc_range[1]]
+    
+    luminous = luminance_flash_count(cur_frame_part, prev_frame_part)
+    red = saturated_red_flash_count(cur_frame_part, prev_frame_part)
+        
+    # Update buffers and flash count
+    luminous_flashes[proc_range[0]:proc_range[1]] += luminous
+    red_flashes[proc_range[0]:proc_range[1]] += red
+    
+    print(proc_range, "Done", flush = True)
+    return np.array([luminous, red])
+
 # Capture frames from the webcam
 try:
     while True:
@@ -59,6 +77,14 @@ try:
                 cur_frame = frame_buffer[-1]
                 prev_frame = frame_buffer[-2]
                 
+                n = cur_frame.shape[0]
+                per_thread = int(np.ceil(n/4))
+                ranges = [(i, i+per_thread) for i in range(0, n, per_thread)]
+                
+                with Pool(4) as pool:
+                    flashes = np.concatenate(pool.map(thread_process_frame, ranges), axis = 1)
+                print(flashes.shape)
+                raise Exception
                 # Check if transition is a flash
                 luminous = luminance_flash_count(cur_frame, prev_frame)
                 red = saturated_red_flash_count(cur_frame, prev_frame)
@@ -91,7 +117,7 @@ try:
                 luminous_flashes -= luminous_flash_buffer.popleft()
                 red_flashes -= red_flash_buffer.popleft()
                 
-                print(time.time() - s, len(time_buffer))
+                print(time.time() - s)
             
 finally:
     cap.release()
