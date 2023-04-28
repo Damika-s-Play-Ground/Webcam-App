@@ -91,7 +91,7 @@ try:
                 luminous_flashes -= luminous_flash_buffer.popleft()
                 red_flashes -= red_flash_buffer.popleft()
 
-                print(time.time() - s, len(time_buffer))
+                #print(time.time() - s, len(time_buffer))
             
 finally:
     cap.release()

@@ -1,8 +1,5 @@
 import numpy as np
 
-R = 2
-G = 1
-B = 0
 
 def gamma_transform(signal: float) -> float:
     """Nonlinear electro-optical transfer function to convert a 
@@ -58,12 +55,12 @@ def sRBG_to_linearRGB(sRGB: np.ndarray) -> np.ndarray:
 def linearRBG_to_Ls(linearRGB: np.ndarray) -> float:
     """Compute the relative luminance value of a pixel in sRGB color space."""
 
-    return 0.2126 * linearRGB[...,R] + 0.7152 * linearRGB[...,G] + 0.0722 * linearRGB[...,B]
+    return 0.2126 * linearRGB[...,0] + 0.7152 * linearRGB[...,1] + 0.0722 * linearRGB[...,2]
 
 
 def red_ratio(sRGB: np.ndarray) -> float:
     """Compute the red ratio of a color in sRGB color space."""
-    return sRGB[...,R] / (sRGB[...,R] + sRGB[...,G] + sRGB[...,B] + 1e-10)
+    return sRGB[...,0] / (sRGB[...,0] + sRGB[...,1] + sRGB[...,2] + 1e-10)
 
 
 def pure_red(sRGB: np.ndarray) -> float:
@@ -71,7 +68,7 @@ def pure_red(sRGB: np.ndarray) -> float:
     # if sRGB[0] > sRGB[1] + sRGB[2]:
     #     return (sRGB[0] - sRGB[1] - sRGB[2]) * 320
     # return 0
-    comp = (sRGB[...,R] - sRGB[...,G] - sRGB[...,B])
+    comp = (sRGB[...,0] - sRGB[...,1] - sRGB[...,2])
     return np.where(comp > 0, comp * 320, 0)
 
 

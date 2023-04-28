@@ -5,7 +5,7 @@ arr = np.random.rand(1200, 1600)
 
 s = time.time()
 for i in range(1, 100):
-    arr += i
+    np.add.at(arr, :, i)
 print(time.time() - s)
 
 arr = np.random.rand(1200, 1600)
