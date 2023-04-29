@@ -113,7 +113,7 @@ def run_program():
             print(np.mean(flash_freqs[0]), np.mean(flash_freqs[1]))
             if luminous_count >= quarter_area_threshold or red_count >= quarter_area_threshold:
                 print("Flashing detected, no of flashing pixels = ", luminous_count, red_count)
-                send_array_over_bluetooth(["Flashing detected","Flashing frequency",np.mean(flash_freqs[0]), np.mean(flash_freqs[1])], serial_connection)
+                send_array_over_bluetooth(["Flashing detected","Luminance flashing",np.mean(flash_freqs[0]), "Red flashing", np.mean(flash_freqs[1])], serial_connection)
                 GPIO.output(14,GPIO.HIGH)
             else:
                 GPIO.output(14,GPIO.LOW)
